@@ -15,7 +15,10 @@ def process_tiktok_reviews():
 
     wait_for_data_file=FileSensor(
         task_id='wait_for_data_file',
-        filepath='data/tiktok_google_play_reviews.csv'
+        filepath='data/tiktok_google_play_reviews.csv',
+        poke_interval=10,
+        timeout=120,
+        mode='reschedule'
     )
 
     @task.branch(task_id='check_file_isempty')

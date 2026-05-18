@@ -1,4 +1,26 @@
 # Airflow Task
+
+## Table of Contents
+* [Project Structure](#project-stucture)
+  * [process_data.py](#process_datapy)
+  * [load_data.py](#load_datapy)
+  * [requirements.txt](#requirementstxt)
+  * [docker-compose.yaml](#docker-composeyaml)
+  * [.env](#env)
+* [Airflow UI](#airflow-ui)
+  * [File Sensor Running](#filesensor-running)
+  * [File Sensor Up For Reschedule](#filesensor-up-for-reschedule)
+  * [File Sensor Failed](#filesensor-failed)
+  * [DAG Process Tiktok reviews](#dag-process-tiktok-reviews)
+  * [DAG Load in MongoDB](#dag-load-in-mongo)
+  * [Data in MongoDB](#data-in-mongodb)
+* [MongoDB Queries](#mongodb-queries)
+  * [Top 5 frequently occurring comments](#top-5-frequently-occurring-comments)
+  * [All entries where the “content” field is less than 5 characters long](#all-entries-where-the-content-field-is-less-than-5-characters-long)
+  * [Average rating for each day (the result should be in timestamp type)](#average-rating-for-each-day-the-result-should-be-in-timestamp-type)
+
+
+
 ## Project Structure
 - dags
   - Two DAG Files: `process_data.py` and `load_data.py`
@@ -48,7 +70,42 @@ This .env file consists of environmental variables mainly for MongoDB
 
 ---
 
-# MongoDB Queries 
+## Airflow UI
+### FileSensor Running
+When DAG is triggered, FileSensor is run to check that file exists at a specified location
+<img src="sources/file_sensor_running.png" alt="FileSensorRunning" width="50%">
+
+---
+
+### FileSensor Up For Reschedule
+When FileSensor checks for the file and it doesn't exist, it is up for reschedule. It checks again and again in every `poke_interval` seconds
+<img src="sources/file_sensor_up_for_reschedule.png" alt="FileSensorUpForReschedule" width="50%">
+
+---
+
+### FileSensor Failed
+When `timeout` seconds pass, if the file still doesn't exist, the DAG fails    
+<img src="sources/file_sensor_failed.png" alt="FileSensorFailed" width="50%">
+
+---
+
+### DAG Process Tiktok Reviews
+When FileSensor is successful, the DAG continues completing tasks   
+<img src="sources/dag_process_tiktok_reviews.png" alt="DAGProcessTiktokReviews" width="50%">
+
+---
+
+### DAG Load in MongoDB
+When the first DAG is successful, the second DAG is triggered automatically
+<img src="sources/dag_load_in_mongo.png" alt="DAGLoadInMongo" width="50%">
+
+---
+
+### Data in MongoDB
+When the second DAG is successful, processed data is saved in MongoDB database
+<img src="sources/mongodb.png" alt="MongoDB" width="50%">
+
+## MongoDB Queries 
 Using MongoDB Compass
 ### Top 5 frequently occurring comments
 To fetch top 5 frequently occuring comments we need `3` stages:

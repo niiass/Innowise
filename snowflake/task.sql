@@ -10,7 +10,7 @@ CLONE stage2.airlines
 BEFORE (STATEMENT => '01c4b050-0306-fc77-0005-0972000317d6');
 
 -- DML 1
-SELECT * FROM stage3.visitors_per_month AT(OFFSET=>-7200)
+SELECT * FROM stage3.visitors_per_month AT(OFFSET=>-7200);
 
 -- DML 2
 SELECT * FROM stage2.airlines BEFORE(STATEMENT=>'01c4b050-0306-fc77-0005-0972000317d6');

@@ -13,9 +13,9 @@ From `snowflake/populate_table.sql` execute first query to create csv file forma
 ## DAG
 ### airlines_dag.py:
 This DAG is responsible for automation of processing and logging process:
-- `load_stage2` - This SQLExecuteQueryOperator calls existing procedure when it is triggered. The procedure populates the stage2 **airilnes** table by applying type conversions for making dataset structure accurate
+- `load_stage2` - This SQLExecuteQueryOperator calls existing procedure when it is triggered. The procedure populates the stage2 **airlnes** table by applying type conversions for making dataset structure accurate
 - `log_stage2_audit` - This SQLExecuteQueryOperator logs the number of affected rows when migrating data from stage1 to stage2
-- `load_stage3` - This SQLExecuteQueryOperator calls existing procedure when it is triggered. The procedure populates the stag3 table **visitors_per_month** by applying aggregation functions to get information about how many visitors had each contry per month and what was their average age
+- `load_stage3` - This SQLExecuteQueryOperator calls existing procedure when it is triggered. The procedure populates the stage3 table **visitors_per_month** by applying aggregation functions to get information about how many visitors had each country per month and what was their average age
 - `log_stage3_audit` - This SQLExecuteQueryOperator logs the number of affected rows when migrating data from stage2 to stage3
 
 ## Snowflake

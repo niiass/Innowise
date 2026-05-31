@@ -1,7 +1,8 @@
 # Airflow Task
 
 ## Table of Contents
-* [Project Structure](#project-stucture)
+* [Database](#database)
+* [Project Structure](#project-structure)
   * [process_data.py](#process_datapy)
   * [load_data.py](#load_datapy)
   * [requirements.txt](#requirementstxt)
@@ -12,7 +13,7 @@
   * [File Sensor Up For Reschedule](#filesensor-up-for-reschedule)
   * [File Sensor Failed](#filesensor-failed)
   * [DAG Process Tiktok reviews](#dag-process-tiktok-reviews)
-  * [DAG Load in MongoDB](#dag-load-in-mongo)
+  * [DAG Load in MongoDB](#dag-load-in-mongodb)
   * [Data in MongoDB](#data-in-mongodb)
 * [MongoDB Queries](#mongodb-queries)
   * [Top 5 frequently occurring comments](#top-5-frequently-occurring-comments)
@@ -20,6 +21,10 @@
   * [Average rating for each day (the result should be in timestamp type)](#average-rating-for-each-day-the-result-should-be-in-timestamp-type)
 
 
+## Database
+Download the required dataset from [Google Drive](https://drive.google.com/file/d/1crEUrJMn3XI4ukzlTN8r0ZAzdOVYhpNq/view).
+
+Save the downloaded file in the '/data' directory.
 
 ## Project Structure
 - dags

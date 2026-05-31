@@ -14,19 +14,3 @@ SELECT * FROM stage3.visitors_per_month AT(OFFSET=>-7200);
 
 -- DML 2
 SELECT * FROM stage2.airlines BEFORE(STATEMENT=>'01c4b050-0306-fc77-0005-0972000317d6');
-
-
--- Create Secure View
-
-CREATE OR REPLACE ROW ACCESS POLICY stage3.airline_policy
-AS (current_role STRING) RETURNS BOOLEAN ->
-  CURRENT_ROLE() = 'ACCOUNTADMIN'
-;
-
-CREATE OR REPLACE SECURE VIEW stage3.secure_airlines_fact AS
-SELECT * FROM stage2.airlines;
-
--- Attach Row Level Security Policy
-
-ALTER TABLE stage3.secure_airlines_fact 
-ADD ROW ACCESS POLICY stage3.airline_policy ON (PassengerID);

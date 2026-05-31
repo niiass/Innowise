@@ -1,22 +1,18 @@
 from airflow.decorators import dag, task
 from airflow.sdk import Asset
-from airflow.providers.mongo.hooks.mongo import MongoHook
 import pandas as pd
+from config import ASSET_FILE_PATH, MONGO_COLLECTION, MONGO_DB, PROCESSED_REVIEWS_FILE_PATH
+from tasks import load_to_mongodb
 
 @dag(
     dag_id='load_in_mongo',
-    schedule=[Asset("file:///opt/airflow/data/processed_reviews.csv")],
+    schedule=[Asset(ASSET_FILE_PATH)],
     catchup=False
 )
 def load_in_mongo():
-    @task(task_id='csv_to_mongodb')
+    @task
     def csv_to_mongodb():
-        mongo_hook = MongoHook(mongo_conn_id='mongo_default')
-        collection = mongo_hook.get_collection(mongo_collection='reviews', mongo_db='tiktok_reviews_db')
-        data = pd.read_csv('/opt/airflow/data/processed_reviews.csv')
-        data = data.to_dict(orient='records')
-        collection.delete_many({})
-        collection.insert_many(data)
+        load_to_mongodb(MONGO_COLLECTION, MONGO_DB, PROCESSED_REVIEWS_FILE_PATH)
     
     csv_to_mongodb()
 

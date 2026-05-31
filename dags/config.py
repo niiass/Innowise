@@ -1,0 +1,5 @@
+ASSET_FILE_PATH='file:///opt/airflow/data/processed_reviews.csv'
+MONGO_COLLECTION='reviews'
+MONGO_DB='tiktok_reviews_db'
+INPUT_REVIEWS_FILE_PATH='/opt/airflow/data/tiktok_google_play_reviews.csv'
+PROCESSED_REVIEWS_FILE_PATH='/opt/airflow/data/processed_reviews.csv'

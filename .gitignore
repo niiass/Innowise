@@ -1,0 +1,7 @@
+.streamlit/secrets.toml
+__pycache__/
+.env
+.DS_Store
+.vscode/
+.idea/
+.streamlit/cache/

@@ -1,50 +1,43 @@
-from airflow.decorators import dag
-from airflow.providers.snowflake.operators.snowflake import SQLExecuteQueryOperator
+import os
+from airflow.decorators import dag, task
+from airflow.providers.snowflake.hooks.snowflake import SnowflakeHook
 from datetime import datetime
-from config import STAGE2_PROCEDURE, AUDIT_TABLE, STAGE3_PROCEDURE
+from config import SNOWFLAKE_CONN_ID, FOLDER_ORDER, SNOWFLAKE_OBJECTS_DIR
 
 @dag(
     dag_id='airlines_dwh_pipeline',
     start_date=datetime(2026, 1, 1),
     schedule='@daily',
-    catchup=False,
-    render_template_as_native_obj=True
+    catchup=False
 )
-def load_airlines_stages():
-    load_stage2 = SQLExecuteQueryOperator(
-        task_id='load_stage2',
-        conn_id='snowflake_default',
-        sql=f"CALL {STAGE2_PROCEDURE};"
-    )
+def setup_db():
+    @task
+    def run_sql(file_path: str):
+        with open(file_path, 'r') as f:
+            sql = f.read()
 
-    log_stage2_audit = SQLExecuteQueryOperator(
-        task_id='log_stage2_audit',
-        conn_id='snowflake_default',
-        sql="""
-            INSERT INTO {audit_table} (PipelineName, SourceStage, TargetStage, RowsInserted)
-            VALUES (
-                'Populate stage2', 'stage1', 'stage2', {{{{ task_instance.xcom_pull(task_ids='load_stage2')[0][0] | int }}}}
-            );
-        """.format(audit_table=AUDIT_TABLE)
-    )
-    
-    load_stage3 = SQLExecuteQueryOperator (
-        task_id='load_stage3',
-        conn_id='snowflake_default',
-        sql=f"CALL {STAGE3_PROCEDURE};"
-    )
+        hook = SnowflakeHook(snowflake_conn_id=SNOWFLAKE_CONN_ID)
+        hook.run(sql)
 
-    log_stage3_audit = SQLExecuteQueryOperator(
-        task_id='log_stage3_audit',
-        conn_id='snowflake_default',
-        sql="""
-            INSERT INTO {audit_table} (PipelineName, SourceStage, TargetStage, RowsInserted)
-            VALUES (
-            'Each Country Monthly Visitors', 'stage2', 'stage3', {{{{ task_instance.xcom_pull(task_ids='load_stage3')[0][0] | int }}}}
-            );
-        """.format(audit_table=AUDIT_TABLE)
-    )
-    
-    load_stage2 >> log_stage2_audit >> load_stage3 >> log_stage3_audit
+    previous_task = None
 
-load_airlines_stages()
+    for folder_name in FOLDER_ORDER:
+        folder_path = os.path.join(SNOWFLAKE_OBJECTS_DIR, folder_name)
+
+        if not os.path.isdir(folder_path):
+            continue
+
+        for file_name in os.listdir(folder_path):
+            if not file_name.endswith('.sql'):
+                continue
+
+            file_path = os.path.join(folder_path, file_name)
+            task_id = f"{folder_name}-{file_name.replace('.sql', '')}"
+            current_task = run_sql.override(task_id=task_id)(file_path)
+
+            if previous_task is not None:
+                previous_task >> current_task
+
+            previous_task = current_task
+
+setup_db()

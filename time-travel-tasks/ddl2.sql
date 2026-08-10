@@ -1,0 +1,3 @@
+CREATE OR REPLACE TABLE stage2.airlines_restored
+CLONE stage2.airlines
+BEFORE (STATEMENT => '01c4b050-0306-fc77-0005-0972000317d6');

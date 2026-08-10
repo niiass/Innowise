@@ -1,0 +1,1 @@
+create or replace stream INNOWISE_SNOWFLAKE_LMS.STAGE1.AIRLINE_STREAM on table AIRLINES;

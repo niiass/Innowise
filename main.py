@@ -25,7 +25,7 @@ def valid_identifier(name: str) -> bool:
 
 target_db_name = st.text_input("Target DB name").upper()
 clone_from_db = st.text_input("Clone from DB").upper()
-owner_role = st.selectbox("Owner role", ["DEVELOPER", "ENGINEER", "ANALYST", "READ_ONLY_ROLE"])
+dev_role = st.text_input("Development role", value="DEVELOPMENT").upper()
 read_only_role = st.text_input("Read-only role", value="READ_ONLY_ROLE").upper()
 
 errors = []
@@ -57,48 +57,46 @@ if db_exists:
         "It will be dropped and recreated if you proceed."
     )
 
-SCHEMA_USAGE = [
-    "GRANT USAGE ON DATABASE {db} TO ROLE {role};",
-    "GRANT USAGE ON ALL SCHEMAS IN DATABASE {db} TO ROLE {role};",
-    "GRANT USAGE ON FUTURE SCHEMAS IN DATABASE {db} TO ROLE {role};",
-]
- 
-ROLE_GRANT_MAP = {
-    "DEVELOPER": [
-        "GRANT OWNERSHIP ON DATABASE {db} TO ROLE {role} COPY CURRENT GRANTS;",
-    ],
-    "ENGINEER": SCHEMA_USAGE + [
-        "GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN DATABASE {db} TO ROLE {role};",
-        "GRANT SELECT, INSERT, UPDATE, DELETE ON FUTURE TABLES IN DATABASE {db} TO ROLE {role};",
-    ],
-    "ANALYST": SCHEMA_USAGE + [
-        "GRANT SELECT ON ALL TABLES IN DATABASE {db} TO ROLE {role};",
-        "GRANT SELECT ON FUTURE TABLES IN DATABASE {db} TO ROLE {role};",
-        "GRANT SELECT ON ALL VIEWS IN DATABASE {db} TO ROLE {role};",
-        "GRANT SELECT ON FUTURE VIEWS IN DATABASE {db} TO ROLE {role};",
-    ],
-    "READ_ONLY_ROLE": SCHEMA_USAGE + [
-        "GRANT SELECT ON ALL VIEWS IN DATABASE {db} TO ROLE {role};",
-        "GRANT SELECT ON FUTURE VIEWS IN DATABASE {db} TO ROLE {role};",
-    ],
-}
+def dev_grants(db: str, role: str) -> str:
+    return f"""
+GRANT OWNERSHIP ON DATABASE {db} TO ROLE {role};
+GRANT OWNERSHIP ON ALL SCHEMAS IN DATABASE {db} TO ROLE {role};
+GRANT OWNERSHIP ON ALL TABLES IN DATABASE {db} TO ROLE {role};
+GRANT OWNERSHIP ON ALL VIEWS IN DATABASE {db} TO ROLE {role};
+GRANT OWNERSHIP ON ALL MATERIALIZED VIEWS IN DATABASE {db} TO ROLE {role};
+GRANT OWNERSHIP ON ALL PROCEDURES IN DATABASE {db} TO ROLE {role};
+GRANT OWNERSHIP ON ALL FUNCTIONS IN DATABASE {db} TO ROLE {role};
 
-def build_role_sql(db: str, role: str, role_type: str) -> str:
-    statements = ROLE_GRANT_MAP.get(role_type, [])
-    return "\n".join(stmt.format(db=db, role=role) for stmt in statements)
+GRANT ALL PRIVILEGES ON FUTURE SCHEMAS IN DATABASE {db} TO ROLE {role};
+GRANT ALL PRIVILEGES ON FUTURE TABLES IN DATABASE {db} TO ROLE {role};
+GRANT ALL PRIVILEGES ON FUTURE VIEWS IN DATABASE {db} TO ROLE {role};
+GRANT ALL PRIVILEGES ON FUTURE MATERIALIZED VIEWS IN DATABASE {db} TO ROLE {role};
+GRANT ALL PRIVILEGES ON FUTURE PROCEDURES IN DATABASE {db} TO ROLE {role};
+GRANT ALL PRIVILEGES ON FUTURE FUNCTIONS IN DATABASE {db} TO ROLE {role};
+"""
+
+def readonly_grants(db: str, role: str) -> str:
+    return f"""
+GRANT USAGE ON DATABASE {db} TO ROLE {role};
+GRANT USAGE ON ALL SCHEMAS IN DATABASE {db} TO ROLE {role};
+GRANT USAGE ON FUTURE SCHEMAS IN DATABASE {db} TO ROLE {role};
+
+GRANT SELECT ON ALL TABLES IN DATABASE {db} TO ROLE {role};
+GRANT SELECT ON FUTURE TABLES IN DATABASE {db} TO ROLE {role};
+GRANT SELECT ON ALL VIEWS IN DATABASE {db} TO ROLE {role};
+GRANT SELECT ON FUTURE VIEWS IN DATABASE {db} TO ROLE {role};
+GRANT SELECT ON ALL MATERIALIZED VIEWS IN DATABASE {db} TO ROLE {role};
+GRANT SELECT ON FUTURE MATERIALIZED VIEWS IN DATABASE {db} TO ROLE {role};
+"""
 
 def build_full_sql() -> str:
     base_sql = (
         f"DROP DATABASE IF EXISTS {target_db_name};\n"
         f"CREATE DATABASE {target_db_name} CLONE {clone_from_db};"
     )
-    owner_sql = build_role_sql(target_db_name, owner_role, owner_role)
-    read_only_sql = build_role_sql(target_db_name, read_only_role, "READ_ONLY_ROLE")
-    return (
-        f"{base_sql}\n\n"
-        f"-- Owner role grants ({owner_role})\n{owner_sql}\n\n"
-        f"-- Read-only role grants ({read_only_role})\n{read_only_sql}"
-    )
+    dev_sql = dev_grants(target_db_name, dev_role)
+    readonly_sql = readonly_grants(target_db_name, read_only_role)
+    return f"{base_sql}\n\n{dev_sql}\n\n{readonly_sql}"
 
 if "sql_query" not in st.session_state:
     st.session_state.sql_query = ""

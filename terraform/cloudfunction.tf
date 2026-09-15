@@ -4,8 +4,6 @@ data "archive_file" "weather_bronze_ingestion_zip" {
   output_path = "${path.module}/.build/weather_bronze_ingestion.zip"
 }
 
-# Small, ephemeral bucket that only holds deployable function source zips —
-# force_destroy = true is fine here since it never holds pipeline data.
 resource "google_storage_bucket" "function_source" {
   name                        = "${var.project_id}-${var.environment}-function-source"
   location                    = var.region
@@ -20,8 +18,6 @@ resource "google_storage_bucket" "function_source" {
   depends_on = [google_project_service.required]
 }
 
-# Content-addressed object name so a change in source code produces a new
-# object and forces the function to redeploy with the new build.
 resource "google_storage_bucket_object" "weather_bronze_ingestion_source" {
   name   = "weather_bronze_ingestion/${data.archive_file.weather_bronze_ingestion_zip.output_md5}.zip"
   bucket = google_storage_bucket.function_source.name
@@ -64,8 +60,6 @@ resource "google_cloudfunctions2_function" "weather_bronze_ingestion" {
   depends_on = [google_project_service.required]
 }
 
-# Gen2 functions run on Cloud Run under the hood; this is the invoker
-# permission Cloud Scheduler needs to call the function's HTTPS endpoint.
 resource "google_cloudfunctions2_function_iam_member" "scheduler_invoker" {
   project        = var.project_id
   location       = var.region
@@ -74,8 +68,6 @@ resource "google_cloudfunctions2_function_iam_member" "scheduler_invoker" {
   member         = "serviceAccount:${google_service_account.sa_scheduler.email}"
 }
 
-# Belt-and-suspenders: also grant run.invoker directly on the backing Cloud
-# Run service, since some Gen2 setups enforce Cloud Run's own IAM layer.
 resource "google_cloud_run_service_iam_member" "scheduler_run_invoker" {
   project  = var.project_id
   location = var.region

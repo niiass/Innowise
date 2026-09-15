@@ -14,7 +14,6 @@ BUCKET_NAME = "weather-data-pipeline-506613-dev-weather-lake"
 DATASET_ID = "weather_data"
 TABLE_ID = "weather_realtime"
 
-# Numeric metric fields as they appear in the tomorrow.io payload -> gold column name
 NUMERIC_FIELDS = {
     "temperature": "weather_temperature",
     "humidity": "weather_humidity",
@@ -23,7 +22,6 @@ NUMERIC_FIELDS = {
     "precipitationProbability": "weather_precipitationProbability",
 }
 
-# (min, max) inclusive ranges, only enforced when the field is present
 VALUE_RANGES = {
     "temperature": (-90, 70),
     "humidity": (0, 100),
@@ -88,8 +86,6 @@ def weather_pipeline():
             target_dt = datetime.now(timezone.utc)
         else:
             target_dt = datetime.now(timezone.utc) - timedelta(hours=1)
-            # NOTE: this must mirror the exact path the Cloud Function writes to:
-            # bronze/{YYYY/MM/DD/HH}/weather_{location}_{timestamp}.json
             bronze_prefix = f"bronze/{target_dt.strftime('%Y/%m/%d/%H')}/"
 
         logging.info(f"Scanning Bronze prefix: gs://{BUCKET_NAME}/{bronze_prefix}")
@@ -148,7 +144,6 @@ def weather_pipeline():
                 invalid_count += 1
                 continue
 
-            # Type + range validation on numeric metric fields
             record_valid = True
             metrics = {}
             for src_field, gold_col in NUMERIC_FIELDS.items():
@@ -196,7 +191,6 @@ def weather_pipeline():
 
         df = pd.DataFrame(valid_records)
 
-        # Normalize event_time to a BigQuery-friendly ISO8601 UTC timestamp
         df["event_time"] = pd.to_datetime(df["event_time"], utc=True).dt.strftime(
             "%Y-%m-%dT%H:%M:%S.%fZ"
         )
@@ -210,7 +204,6 @@ def weather_pipeline():
         df = df[CSV_COLUMN_ORDER]
 
         run_ts = run_ts_dt.strftime("%Y%m%d_%H%M%S")
-        # Use the actual hour scanned (works whether source_path was overridden or not)
         hour_from_prefix = bronze_prefix.strip("/").split("/", 1)[1] if source_path else target_dt.strftime("%Y/%m/%d/%H")
         silver_blob_path = f"silver/weather/realtime/{hour_from_prefix}/{run_ts}.csv"
 

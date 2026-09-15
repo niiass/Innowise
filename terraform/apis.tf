@@ -18,5 +18,5 @@ resource "google_project_service" "required" {
 
   project            = var.project_id
   service            = each.value
-  disable_on_destroy = false # don't disable project-wide APIs just because we destroy our resources
+  disable_on_destroy = false
 }

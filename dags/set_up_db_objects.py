@@ -1,24 +1,16 @@
 import os
-from airflow.decorators import dag, task
-from airflow.providers.snowflake.hooks.snowflake import SnowflakeHook
+from airflow.decorators import dag
 from datetime import datetime
-from config import SNOWFLAKE_CONN_ID, FOLDER_ORDER, SNOWFLAKE_OBJECTS_DIR
+from config import FOLDER_ORDER, SNOWFLAKE_OBJECTS_DIR
+from tasks import run_sql
 
 @dag(
-    dag_id='airlines_dwh_pipeline',
+    dag_id='set_up_db_objects',
     start_date=datetime(2026, 1, 1),
     schedule='@daily',
     catchup=False
 )
 def setup_db():
-    @task
-    def run_sql(file_path: str):
-        with open(file_path, 'r') as f:
-            sql = f.read()
-
-        hook = SnowflakeHook(snowflake_conn_id=SNOWFLAKE_CONN_ID)
-        hook.run(sql)
-
     previous_task = None
 
     for folder_name in FOLDER_ORDER:

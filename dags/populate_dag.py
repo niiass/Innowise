@@ -12,41 +12,34 @@ from sql import POPULATE_STAGE1, LOG_STAGE2_AUDIT, LOG_STAGE3_AUDIT
     catchup=False
 )
 def populate_db():
-    @task
-    def load_stage1():
-        hook = SnowflakeHook(snowflake_conn_id=SNOWFLAKE_CONN_ID)
-        hook.run(POPULATE_STAGE1)
+    def get_hook() -> SnowflakeHook:
+        return SnowflakeHook(snowflake_conn_id=SNOWFLAKE_CONN_ID)
 
     @task
-    def load_stage2():
-        hook = SnowflakeHook(snowflake_conn_id=SNOWFLAKE_CONN_ID)
-        result = hook.get_first(f"CALL { STAGE2_PROCEDURE };")
-        return int(result[0])
-
-    @task
-    def log_stage2_audit(rows_inserted: int):
-        hook = SnowflakeHook(snowflake_conn_id=SNOWFLAKE_CONN_ID)
-        sql = LOG_STAGE2_AUDIT.format(audit_table=AUDIT_TABLE, rows=rows_inserted)
+    def load_table(sql: str):
+        hook = get_hook()
         hook.run(sql)
 
     @task
-    def load_stage3():
-        hook = SnowflakeHook(snowflake_conn_id=SNOWFLAKE_CONN_ID)
-        result = hook.get_first(f"CALL { STAGE3_PROCEDURE };")
+    def run_procedure(procedure: str):
+        hook = get_hook()
+        result = hook.get_first(procedure)
+        if not result or result[0] is None:
+            raise ValueError(f"Procedure {procedure} did not return a valid row count")
         return int(result[0])
 
     @task
-    def log_stage3_audit(rows_inserted: int):
-        hook = SnowflakeHook(snowflake_conn_id=SNOWFLAKE_CONN_ID)
-        sql = LOG_STAGE3_AUDIT.format(audit_table=AUDIT_TABLE, rows=rows_inserted)
+    def log_audit(audit_stage: str, rows: int):
+        hook = get_hook()
+        sql = audit_stage.format(audit_table=AUDIT_TABLE, rows=rows)
         hook.run(sql)
 
-    stage1 = load_stage1()
-    stage2_rows = load_stage2()
-    stage3_rows = load_stage3()
+    stage1 = load_table(POPULATE_STAGE1)
+    stage2_rows = run_procedure(f"CALL { STAGE2_PROCEDURE };")
+    stage3_rows = run_procedure(f"CALL { STAGE3_PROCEDURE };")
 
     stage1 >> stage2_rows
-    log_stage2_audit(stage2_rows) >> stage3_rows
-    log_stage3_audit(stage3_rows)
+    log_audit(LOG_STAGE2_AUDIT, stage2_rows) >> stage3_rows
+    log_audit(LOG_STAGE3_AUDIT, stage3_rows)
 
 populate_db()

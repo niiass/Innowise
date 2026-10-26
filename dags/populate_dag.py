@@ -1,45 +1,23 @@
-import os
-from airflow.decorators import dag, task
-from airflow.providers.snowflake.hooks.snowflake import SnowflakeHook
+from airflow.decorators import dag
 from datetime import datetime
-from config import STAGE2_PROCEDURE, AUDIT_TABLE, STAGE3_PROCEDURE, SNOWFLAKE_CONN_ID, FOLDER_ORDER, SNOWFLAKE_OBJECTS_DIR
+from config import STAGE2_PROCEDURE, AUDIT_TABLE, STAGE3_PROCEDURE
 from sql import POPULATE_STAGE1, LOG_STAGE2_AUDIT, LOG_STAGE3_AUDIT
+from tasks import run_sql
 
 @dag(
-    dag_id='airlines_dwh_populate',
+    dag_id='populate_dag',
     start_date=datetime(2026, 1, 1),
     schedule='@daily',
     catchup=False
 )
 def populate_db():
-    def get_hook() -> SnowflakeHook:
-        return SnowflakeHook(snowflake_conn_id=SNOWFLAKE_CONN_ID)
+    stage1 = run_sql.override(task_id="populate_stage1")(POPULATE_STAGE1)
+    stage2_rows = run_sql.override(task_id="run_stage2_procedure")(f"CALL { STAGE2_PROCEDURE };", get_first=True)
+    stage3_rows = run_sql.override(task_id="run_stage3_procedure")(f"CALL { STAGE3_PROCEDURE };", get_first=True)
+    log_stage2 = run_sql.override(task_id="log_stage2_audit")(LOG_STAGE2_AUDIT.format(audit_table=AUDIT_TABLE, rows=stage2_rows))
+    log_stage3 = run_sql.override(task_id="log_stage3_audit")(LOG_STAGE3_AUDIT.format(audit_table=AUDIT_TABLE, rows=stage3_rows))
 
-    @task
-    def load_table(sql: str):
-        hook = get_hook()
-        hook.run(sql)
 
-    @task
-    def run_procedure(procedure: str):
-        hook = get_hook()
-        result = hook.get_first(procedure)
-        if not result or result[0] is None:
-            raise ValueError(f"Procedure {procedure} did not return a valid row count")
-        return int(result[0])
-
-    @task
-    def log_audit(audit_stage: str, rows: int):
-        hook = get_hook()
-        sql = audit_stage.format(audit_table=AUDIT_TABLE, rows=rows)
-        hook.run(sql)
-
-    stage1 = load_table(POPULATE_STAGE1)
-    stage2_rows = run_procedure(f"CALL { STAGE2_PROCEDURE };")
-    stage3_rows = run_procedure(f"CALL { STAGE3_PROCEDURE };")
-
-    stage1 >> stage2_rows
-    log_audit(LOG_STAGE2_AUDIT, stage2_rows) >> stage3_rows
-    log_audit(LOG_STAGE3_AUDIT, stage3_rows)
+    stage1 >> stage2_rows >> log_stage2 >> stage3_rows >> log_stage3
 
 populate_db()

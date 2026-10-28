@@ -1,15 +1,16 @@
-import os
 from airflow.decorators import task
 from airflow.providers.snowflake.hooks.snowflake import SnowflakeHook
 from config import SNOWFLAKE_CONN_ID
 
 @task
-def run_sql(sql_path: str, get_first=False):
-    if os.path.exists(sql_path):
+def run_sql(sql_path: str = '', sql_query: str = '' , get_first: bool = False):
+    if sql_path:
         with open(sql_path, 'r') as f:
             sql = f.read()
+    elif sql_query:
+        sql = sql_query
     else:
-        sql = sql_path
+        raise ValueError("Either 'sql_path' or 'sql_query' has not been provided correctly.")
 
     hook = SnowflakeHook(snowflake_conn_id=SNOWFLAKE_CONN_ID)
 

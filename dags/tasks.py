@@ -18,6 +18,6 @@ def run_sql(sql_path: str = '', sql_query: str = '' , get_first: bool = False):
         result = hook.get_first(sql)
         if not result or result[0] is None:
             raise ValueError(f"Procedure {sql} did not return a valid row count")
-        return int(result[0])
+        return result[0]
     else:
         hook.run(sql)   
